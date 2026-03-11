@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>O Mast - Diploma</title>
-    <!-- Caricamento libreria con fallback -->
-    <script src="https://cdnjs.cloudflare.com"></script>
+    <title>O Mast - Diploma Generator</title>
+    <!-- Caricamento Libreria da sorgente alternativa (UNPKG) più veloce su mobile -->
+    <script src="https://unpkg.com"></script>
     <style>
-        body { font-family: sans-serif; background: #000; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .card { background: #1a1a1a; padding: 25px; border-radius: 15px; text-align: center; width: 85%; max-width: 320px; border-top: 5px solid gold; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        body { font-family: sans-serif; background: #000; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+        .card { background: #1a1a1a; padding: 25px; border-radius: 15px; text-align: center; width: 100%; max-width: 320px; border-top: 5px solid gold; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         input { width: 100%; padding: 12px; margin: 15px 0; border-radius: 8px; border: 1px solid #444; background: #222; color: white; font-size: 16px; box-sizing: border-box; text-align: center; }
         .btn-group { display: flex; flex-direction: column; gap: 10px; width: 100%; }
-        button { border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 12px; transition: 0.2s; }
+        button { border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 12px; transition: 0.2s; width: 100%; }
         #downloadBtn { background: #fff; color: #000; }
         #shareBtn { background: #ffd700; color: #000; }
         #status { font-size: 10px; margin-top: 10px; color: orange; }
@@ -21,7 +21,7 @@
 
 <div class="card">
     <h2 style="color:#ffd700; margin:0; font-size: 20px;">DIPLOMA GENERATOR</h2>
-    <div id="status">Inizializzazione...</div>
+    <div id="status">Verifica sistema...</div>
     <input type="text" id="userName" placeholder="Nome e Cognome">
     <div class="btn-group">
         <button id="downloadBtn">Download PDF</button>
@@ -30,66 +30,76 @@
 </div>
 
 <script>
-    // 1. Controllo se la libreria è caricata
-    window.onload = function() {
+    // Funzione principale che attende il caricamento della pagina e della libreria
+    window.addEventListener('load', function() {
         const status = document.getElementById('status');
         
-        if (!window.jspdf) {
-            status.innerText = "ERRORE: Libreria PDF non caricata!";
+        // Controllo se jsPDF è disponibile (gestisce diversi nomi di esportazione)
+        const jsPDFLib = window.jspdf ? window.jspdf.jsPDF : (window.jsPDF ? window.jsPDF : null);
+
+        if (!jsPDFLib) {
+            status.innerHTML = "ERRORE: Libreria non caricata.<br>Ricarica la pagina o prova con Chrome.";
             status.style.color = "red";
             return;
         }
 
-        const { jsPDF } = window.jspdf;
+        status.innerText = "Sistema Pronto ✅";
+        status.style.color = "lightgreen";
+
         const img = new Image();
-        img.src = 'template.jpg'; // Verifica che sia presente nel repo GitHub
+        img.src = 'template.jpg'; 
 
-        img.onload = () => {
-            status.innerText = "Pronto per la stampa ✅";
-            status.style.color = "lightgreen";
-        };
-
-        img.onerror = () => {
-            status.innerText = "ATTENZIONE: template.jpg non trovato!";
-            status.style.color = "yellow";
-        };
-
-        // Funzione Generazione
         async function createPDF(action) {
             const name = document.getElementById('userName').value.trim();
             if (!name) { alert("Inserisci un nome"); return; }
 
-            const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [1123, 794] });
-            
-            // Se l'immagine è caricata la usa, altrimenti mette solo il testo
+            // Crea istanza PDF (A4 Landscape)
+            const doc = new jsPDFLib({
+                orientation: 'landscape',
+                unit: 'px',
+                format: [1123, 794]
+            });
+
+            // Aggiunta immagine template (se caricata correttamente)
             try {
                 doc.addImage(img, 'JPEG', 0, 0, 1123, 794);
-            } catch(e) { console.log("Immagine non disponibile"); }
+            } catch(e) {
+                console.log("Template non trovato, genero PDF solo testo");
+            }
 
+            // Stile Nome
             doc.setFont("times", "italic");
             doc.setFontSize(70);
             doc.text(name, 561, 420, { align: 'center' });
 
+            // Stile Data
             const oggi = new Date().toLocaleDateString('it-IT');
             doc.setFontSize(22);
             doc.text(`Data: ${oggi}`, 150, 700);
 
             if (action === 'download') {
-                doc.save(`diploma_${name}.pdf`);
+                doc.save(`diploma_${name.replace(/\s+/g, '_')}.pdf`);
             } else {
-                const blob = doc.output('blob');
-                const file = new File([blob], 'diploma.pdf', { type: 'application/pdf' });
+                const pdfBlob = doc.output('blob');
+                const file = new File([pdfBlob], 'diploma.pdf', { type: 'application/pdf' });
+                
                 if (navigator.share) {
-                    await navigator.share({ files: [file], title: 'Diploma' });
+                    try {
+                        await navigator.share({
+                            files: [file],
+                            title: 'Diploma O Mast',
+                            text: 'Ecco il mio certificato!'
+                        });
+                    } catch(err) { console.log("Condivisione annullata"); }
                 } else {
-                    alert("Condivisione non supportata");
+                    alert("Il tuo browser non supporta la condivisione. Usa il tasto Download.");
                 }
             }
         }
 
         document.getElementById('downloadBtn').onclick = () => createPDF('download');
         document.getElementById('shareBtn').onclick = () => createPDF('share');
-    };
+    });
 </script>
 
 </body>
