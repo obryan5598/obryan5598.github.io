@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>O Mast - Master Pizzaiolo</title>
+    <title>O' Masto - Master Pizzaiolo</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; display: flex; flex-direction: column; }
         
@@ -131,7 +131,7 @@
     captureBtn.addEventListener('click', () => {
         const dataUrl = createSnapshot();
         const link = document.createElement('a');
-        link.download = 'omast_sorrento_master_pizzaiolo.jpeg';
+        link.download = 'omasto_sorrento_master_pizzaiolo.jpeg';
         link.href = dataUrl;
         link.click();
     });
@@ -139,7 +139,7 @@
     shareBtn.addEventListener('click', async () => {
         const dataUrl = createSnapshot();
         const blob = await (await fetch(dataUrl)).blob();
-        const file = new File([blob], 'omast_sorrento_master_pizzaiolo.jpeg', { type: 'image/jpeg' });
+        const file = new File([blob], 'omasto_sorrento_master_pizzaiolo.jpeg', { type: 'image/jpeg' });
 
         if (navigator.share) {
             try {
