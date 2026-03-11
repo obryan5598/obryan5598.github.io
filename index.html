@@ -5,13 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>O Mast - Master Pizzaiolo</title>
     <style>
-        /* Layout scuro a tutto schermo */
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; display: flex; flex-direction: column; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; }
         
-        /* Area della fotocamera e cornice */
         #camera-container { 
             position: relative; 
-            flex-grow: 1; /* Occupa tutto lo spazio sopra i bottoni */
+            flex-grow: 1; 
             width: 100vw; 
             display: flex; 
             justify-content: center; 
@@ -26,26 +24,37 @@
             pointer-events: none; object-fit: contain; z-index: 5;
         }
 
-        /* Barra dei comandi SOTTO la cornice */
+        /* Pannello comandi in basso */
         .controls {
-            height: 120px; /* Spazio fisso per i bottoni in basso */
+            height: 140px; 
             width: 100%; 
-            background: #000;
+            background: #111;
             display: flex; 
-            justify-content: space-around; 
+            justify-content: space-evenly; 
             align-items: center; 
             z-index: 10;
-            padding-bottom: env(safe-area-inset-bottom); /* Supporto per iPhone moderni */
+            padding-bottom: env(safe-area-inset-bottom);
+            border-top: 1px solid #333;
         }
 
         .btn {
-            background: #fff; border: none; border-radius: 50%;
-            display: flex; justify-content: center; align-items: center; cursor: pointer;
-            box-shadow: 0 2px 10px rgba(255,255,255,0.2);
+            border: none; border-radius: 12px;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            cursor: pointer; transition: transform 0.1s;
+            color: #000; font-weight: bold; text-transform: uppercase;
         }
 
-        .btn-capture { width: 70px; height: 70px; border: 5px solid #555; }
-        .btn-small { width: 50px; height: 50px; font-size: 22px; background: #333; color: white; }
+        .btn:active { transform: scale(0.95); }
+
+        /* Bottone Inversione */
+        .btn-switch { width: 60px; height: 60px; background: #333; color: white; font-size: 24px; border-radius: 50%; }
+
+        /* Bottoni Azione */
+        .btn-action { width: 90px; height: 80px; font-size: 14px; letter-spacing: 1px; }
+        .btn-shot { background: #fff; }
+        .btn-share { background: #ffd700; } /* Oro per la condivisione */
+
+        .btn span { margin-top: 5px; font-size: 10px; }
 
         canvas { display: none; }
     </style>
@@ -58,9 +67,18 @@
 </div>
 
 <div class="controls">
-    <button class="btn btn-small" id="switchBtn" title="Cambia Camera">🔄</button>
-    <button class="btn btn-capture" id="captureBtn" title="Scatta"></button>
-    <button class="btn btn-small" id="shareBtn" style="display:none;" title="Condividi">📤</button>
+    <!-- 1. Inversione Fotocamera -->
+    <button class="btn btn-switch" id="switchBtn">🔄</button>
+    
+    <!-- 2. Scatto con Download -->
+    <button class="btn btn-action btn-shot" id="captureBtn">
+        📸 <span>SHOT</span>
+    </button>
+    
+    <!-- 3. Scatto con Condivisione -->
+    <button class="btn btn-action btn-share" id="shareBtn">
+        📤 <span>SHARE</span>
+    </button>
 </div>
 
 <canvas id="snapshotCanvas"></canvas>
@@ -82,11 +100,7 @@
         }
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { 
-                    facingMode: mode,
-                    width: { ideal: 3840 },
-                    height: { ideal: 2160 }
-                }, 
+                video: { facingMode: mode, width: { ideal: 3840 }, height: { ideal: 2160 } }, 
                 audio: false 
             });
             currentStream = stream;
@@ -96,7 +110,7 @@
         }
     }
 
-    captureBtn.addEventListener('click', () => {
+    function createSnapshot() {
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext('2d');
@@ -117,18 +131,21 @@
         const y = (canvas.height - h) / 2;
         
         ctx.drawImage(frameImg, x, y, w, h);
+        return canvas.toDataURL('image/jpeg', 0.98);
+    }
 
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.98);
+    // Azione SHOT
+    captureBtn.addEventListener('click', () => {
+        const dataUrl = createSnapshot();
         const link = document.createElement('a');
         link.download = 'omast_sorrento_master_pizzaiolo.jpeg';
         link.href = dataUrl;
         link.click();
-
-        shareBtn.style.display = "flex";
     });
 
+    // Azione SHARE
     shareBtn.addEventListener('click', async () => {
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.98);
+        const dataUrl = createSnapshot();
         const blob = await (await fetch(dataUrl)).blob();
         const file = new File([blob], 'omast_sorrento_master_pizzaiolo.jpeg', { type: 'image/jpeg' });
 
@@ -139,7 +156,9 @@
                     title: 'O Mast - Master Pizzaiolo',
                     text: 'Il mio diploma certificato!'
                 });
-            } catch (err) { console.log("Share failed"); }
+            } catch (err) { console.log("Share cancelled"); }
+        } else {
+            alert("Sharing not supported on this browser. Use SHOT to save.");
         }
     });
 
