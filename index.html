@@ -4,24 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Diploma O Mast</title>
-    <!-- Proviamo la versione 2.5.1 che è la più stabile per mobile -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- Riferimento LOCALE alla libreria appena caricata -->
+    <script src="jspdf.umd.min.js"></script>
+
     <style>
-        body { font-family: sans-serif; background: #000; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 20px; }
-        .card { background: #1a1a1a; padding: 25px; border-radius: 20px; text-align: center; width: 100%; max-width: 320px; border-top: 5px solid gold; border-image: linear-gradient(to right, #009246 33.3%, #fff 33.3%, #fff 66.6%, #ce2b37 66.6%) 1; }
-        input { width: 100%; padding: 15px; margin: 15px 0; border-radius: 10px; border: 1px solid #333; background: #222; color: white; font-size: 18px; text-align: center; box-sizing: border-box; }
+        body { font-family: sans-serif; background: #000; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+        .card { background: #1a1a1a; padding: 30px; border-radius: 20px; text-align: center; width: 100%; max-width: 350px; border-top: 6px solid; border-image: linear-gradient(to right, #009246 33.3%, #fff 33.3%, #fff 66.6%, #ce2b37 66.6%) 1; box-shadow: 0 15px 35px rgba(0,0,0,0.7); }
+        h2 { color: #ffd700; margin-bottom: 5px; }
+        input { width: 100%; padding: 15px; margin: 20px 0; border-radius: 10px; border: 1px solid #333; background: #222; color: white; font-size: 18px; text-align: center; box-sizing: border-box; }
         .btn-group { display: flex; flex-direction: column; gap: 12px; width: 100%; }
-        button { border: none; padding: 16px; border-radius: 10px; font-weight: bold; cursor: pointer; text-transform: uppercase; width: 100%; font-size: 14px; }
+        button { border: none; padding: 16px; border-radius: 10px; font-weight: bold; cursor: pointer; text-transform: uppercase; width: 100%; font-size: 14px; transition: 0.2s; }
         #downloadBtn { background: #fff; color: #000; }
         #shareBtn { background: #ffd700; color: #000; }
-        #status { font-size: 11px; margin-top: 15px; color: #ffd700; }
+        #status { font-size: 11px; margin-top: 15px; color: #ffd700; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2 style="color:#ffd700; margin:0;">MASTER PIZZAIOLO</h2>
-    <div id="status">In attesa...</div>
+    <h2>MASTER PIZZAIOLO</h2>
+    <div id="status">Verifica libreria locale...</div>
     <input type="text" id="userName" placeholder="Nome e Cognome">
     <div class="btn-group">
         <button id="downloadBtn">Download PDF</button>
@@ -30,38 +33,37 @@
 </div>
 
 <script>
-    // 1. Funzione di inizializzazione sicura
-    let pdfLibrary = null;
+    let jsPDFLib = null;
 
-    function init() {
+    // Funzione per inizializzare la libreria caricata localmente
+    function initSystem() {
         const status = document.getElementById('status');
-        // Prova a recuperare la libreria in diversi modi (compatibilità browser)
-        pdfLibrary = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF ? window.jsPDF : null);
-
-        if (pdfLibrary) {
-            status.innerHTML = "SISTEMA PRONTO ✅";
+        
+        // Verifica se la libreria caricata dal file locale è disponibile
+        if (window.jspdf && window.jspdf.jsPDF) {
+            jsPDFLib = window.jspdf.jsPDF;
+            status.innerHTML = "SISTEMA PRONTO (LOCALE) ✅";
             status.style.color = "#009246";
         } else {
-            status.innerHTML = "ERRORE: Libreria non caricata.<br>Prova ad aprire in 'Incognito' o usa Safari/Chrome.";
+            status.innerHTML = "ERRORE: File jspdf.umd.min.js non trovato nel repository.";
             status.style.color = "#ce2b37";
         }
     }
 
-    // Carica immagine
     const img = new Image();
     img.src = 'template.jpg';
 
     async function generate(type) {
-        if (!pdfLibrary) { alert("Sistema non pronto. Ricarica la pagina."); return; }
+        if (!jsPDFLib) { alert("Sistema non pronto. Verifica i file su GitHub."); return; }
+        
         const name = document.getElementById('userName').value.trim();
         if (!name) { alert("Inserisci il nome!"); return; }
 
-        // Creazione PDF
-        const doc = new pdfLibrary({ orientation: 'landscape', unit: 'px', format: });
-        
+        const doc = new jsPDFLib({ orientation: 'landscape', unit: 'px', format: [1123, 794] });
+
         try {
             doc.addImage(img, 'JPEG', 0, 0, 1123, 794);
-        } catch(e) { console.log("Template non trovato."); }
+        } catch(e) { console.log("Immagine template non caricata."); }
 
         doc.setFont("times", "italic");
         doc.setFontSize(70);
@@ -77,18 +79,21 @@
             const blob = doc.output('blob');
             const file = new File([blob], 'diploma.pdf', { type: 'application/pdf' });
             if (navigator.share) {
-                await navigator.share({ files: [file], title: 'Diploma O Mast' });
+                try {
+                    await navigator.share({ files: [file], title: 'Diploma O Mast' });
+                } catch(e) {}
             } else {
                 alert("Condivisione non supportata.");
             }
         }
     }
 
-    // Esegui inizializzazione dopo 1 secondo per dare tempo al caricamento
-    setTimeout(init, 1000);
+    // Attendi un attimo per sicurezza e inizializza
+    setTimeout(initSystem, 500);
 
     document.getElementById('downloadBtn').onclick = () => generate('download');
     document.getElementById('shareBtn').onclick = () => generate('share');
 </script>
+
 </body>
 </html>
