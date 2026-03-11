@@ -71,7 +71,7 @@
 
         const oggi = new Date().toLocaleDateString('it-IT');
         doc.setFontSize(60);
-        doc.text(`${oggi}`, 550, 480, { align: 'right' });
+        doc.text(`${oggi}`, 550, 480, { align: 'center' });
 
         if (type === 'download') {
             doc.save('diploma_omast.pdf');
