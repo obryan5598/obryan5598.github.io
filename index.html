@@ -2,164 +2,90 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>O' Masto - Master Pizzaiolo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>O Mast - Diploma Generator</title>
+    <script src="https://cdnjs.cloudflare.com"></script>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; display: flex; flex-direction: column; }
-        
-        #camera-container { 
-            position: relative; 
-            flex-grow: 1; 
-            width: 100vw; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            overflow: hidden;
-        }
-
-        video { width: 100%; height: 100%; object-fit: cover; }
-        
-        .frame { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            pointer-events: none; object-fit: contain; z-index: 5;
-        }
-
-        /* Pannello ridotto del 30% (da 140px a ~98px) */
-        .controls {
-            height: 98px; 
-            width: 100%; 
-            background: #111;
-            display: flex; 
-            justify-content: space-evenly; 
-            align-items: center; 
-            z-index: 10;
-            padding-bottom: env(safe-area-inset-bottom);
-            border-top: 5px solid;
-            border-image: linear-gradient(to right, #009246 33.3%, #ffffff 33.3%, #ffffff 66.6%, #ce2b37 66.6%) 1;
-
-        }
-
-        .btn {
-            border: none; border-radius: 10px;
-            display: flex; flex-direction: column; justify-content: center; align-items: center; 
-            cursor: pointer; transition: transform 0.1s;
-            color: #000; font-weight: bold; text-transform: uppercase;
-        }
-
-        .btn:active { transform: scale(0.95); }
-
-        /* Bottoni ridotti del 30% */
-        .btn-switch { width: 42px; height: 42px; background: #333; color: white; font-size: 18px; border-radius: 50%; }
-        .btn-action { width: 65px; height: 58px; font-size: 11px; letter-spacing: 0.5px; }
-        
-        .btn-shot { background: #fff; }
-        .btn-share { background: #ffd700; }
-
-        .btn span { margin-top: 3px; font-size: 8px; }
-
-        canvas { display: none; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #000; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .card { background: #1a1a1a; padding: 40px 20px; border-radius: 20px; text-align: center; width: 85%; max-width: 400px; border-top: 6px solid; border-image: linear-gradient(to right, #009246 33.3%, #fff 33.3%, #fff 66.6%, #ce2b37 66.6%) 1; box-shadow: 0 20px 40px rgba(0,0,0,0.8); }
+        h2 { color: #ffd700; margin-bottom: 10px; letter-spacing: 1px; }
+        p { color: #ccc; font-size: 14px; margin-bottom: 25px; }
+        input { width: 100%; padding: 15px; margin-bottom: 20px; border-radius: 10px; border: 1px solid #333; background: #222; color: white; font-size: 16px; box-sizing: border-box; text-align: center; }
+        input:focus { outline: 2px solid #ffd700; border-color: transparent; }
+        .btn-group { display: flex; flex-direction: column; gap: 12px; }
+        button { border: none; padding: 16px; border-radius: 10px; font-weight: bold; cursor: pointer; font-size: 14px; text-transform: uppercase; transition: transform 0.1s; }
+        button:active { transform: scale(0.98); }
+        #downloadBtn { background: #fff; color: #000; }
+        #shareBtn { background: #ffd700; color: #000; }
     </style>
 </head>
 <body>
 
-<div id="camera-container">
-    <video id="webcam" autoplay playsinline></video>
-    <img id="userFrame" src="certified.png" class="frame">
+<div class="card">
+    <h2>MASTER PIZZAIOLO</h2>
+    <p>Inserisci il nome per il tuo certificato</p>
+    <input type="text" id="userName" placeholder="Nome e Cognome" maxlength="30">
+    <div class="btn-group">
+        <button id="downloadBtn">⬇️ Download PDF</button>
+        <button id="shareBtn">📤 Share Diploma</button>
+    </div>
 </div>
-
-<div class="controls">
-    <button class="btn btn-switch" id="switchBtn">🔄</button>
-    <button class="btn btn-action btn-shot" id="captureBtn">
-        📸 <span>SHOT</span>
-    </button>
-    <button class="btn btn-action btn-share" id="shareBtn">
-        📤 <span>SHARE</span>
-    </button>
-</div>
-
-<canvas id="snapshotCanvas"></canvas>
 
 <script>
-    const video = document.getElementById('webcam');
-    const canvas = document.getElementById('snapshotCanvas');
-    const frameImg = document.getElementById('userFrame');
-    const captureBtn = document.getElementById('captureBtn');
-    const switchBtn = document.getElementById('switchBtn');
-    const shareBtn = document.getElementById('shareBtn');
+    const { jsPDF } = window.jspdf;
 
-    let currentStream;
-    let useFacingMode = "environment";
+    async function generatePDF(action) {
+        const name = document.getElementById('userName').value.trim();
+        if (!name) { alert("Inserisci un nome!"); return null; }
 
-    async function startCamera(mode) {
-        if (currentStream) {
-            currentStream.getTracks().forEach(track => track.stop());
-        }
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: mode, width: { ideal: 3840 }, height: { ideal: 2160 } }, 
-                audio: false 
-            });
-            currentStream = stream;
-            video.srcObject = stream;
-        } catch (err) {
-            if(mode === "environment") startCamera("user");
-        }
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [1123, 794] });
+        const img = new Image();
+        img.src = 'template.jpg'; 
+
+        return new Promise((resolve) => {
+            img.onload = async function() {
+                // 1. Sfondo Diploma
+                doc.addImage(img, 'JPEG', 0, 0, 1123, 794);
+
+                // 2. Nome Elegante (Times Italic)
+                doc.setFont("times", "italic");
+                doc.setFontSize(70);
+                doc.setTextColor(40, 40, 40);
+                doc.text(name, 561, 420, { align: 'center' });
+
+                // 3. Data Automatica
+                const oggi = new Date().toLocaleDateString('it-IT');
+                doc.setFontSize(22);
+                doc.setFont("helvetica", "normal");
+                // Posiziona la data in basso (regola 200, 700 secondo il tuo template)
+                doc.text(`Data: ${oggi}`, 150, 700); 
+
+                if (action === 'download') {
+                    doc.save(`diploma_omast_${name.replace(/\s+/g, '_')}.pdf`);
+                } else if (action === 'share') {
+                    const pdfBlob = doc.output('blob');
+                    const file = new File([pdfBlob], 'diploma_omast.pdf', { type: 'application/pdf' });
+                    
+                    if (navigator.share) {
+                        try {
+                            await navigator.share({
+                                files: [file],
+                                title: 'O Mast - Diploma',
+                                text: `Ecco il diploma di Master Pizzaiolo per ${name}!`
+                            });
+                        } catch (err) { console.log("Condivisione annullata"); }
+                    } else {
+                        alert("Condivisione non supportata su questo browser. Usa il tasto Download.");
+                    }
+                }
+                resolve();
+            };
+            img.onerror = () => alert("File template.jpg non trovato nel repository!");
+        });
     }
 
-    function createSnapshot() {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-
-        if (useFacingMode === "user") {
-            ctx.translate(canvas.width, 0);
-            ctx.scale(-1, 1);
-        }
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-
-        const hRatio = canvas.width / frameImg.naturalWidth;
-        const vRatio = canvas.height / frameImg.naturalHeight;
-        const ratio = Math.min(hRatio, vRatio);
-        const w = frameImg.naturalWidth * ratio;
-        const h = frameImg.naturalHeight * ratio;
-        const x = (canvas.width - w) / 2;
-        const y = (canvas.height - h) / 2;
-        
-        ctx.drawImage(frameImg, x, y, w, h);
-        return canvas.toDataURL('image/jpeg', 0.98);
-    }
-
-    captureBtn.addEventListener('click', () => {
-        const dataUrl = createSnapshot();
-        const link = document.createElement('a');
-        link.download = 'omasto_sorrento_master_pizzaiolo.jpeg';
-        link.href = dataUrl;
-        link.click();
-    });
-
-    shareBtn.addEventListener('click', async () => {
-        const dataUrl = createSnapshot();
-        const blob = await (await fetch(dataUrl)).blob();
-        const file = new File([blob], 'omasto_sorrento_master_pizzaiolo.jpeg', { type: 'image/jpeg' });
-
-        if (navigator.share) {
-            try {
-                await navigator.share({
-                    files: [file],
-                    title: 'O Masto - Master Pizzaiolo',
-                    text: 'I am a Master Pizzaiolo!'
-                });
-            } catch (err) { console.log("Share cancelled"); }
-        }
-    });
-
-    switchBtn.addEventListener('click', () => {
-        useFacingMode = (useFacingMode === "environment") ? "user" : "environment";
-        startCamera(useFacingMode);
-    });
-
-    startCamera(useFacingMode);
+    document.getElementById('downloadBtn').addEventListener('click', () => generatePDF('download'));
+    document.getElementById('shareBtn').addEventListener('click', () => generatePDF('share'));
 </script>
 
 </body>
