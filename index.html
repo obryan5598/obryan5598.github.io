@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>O'Masto Sorrento Certified Master Pizzaiolo</title>
+    <title>O Mast - Master Pizzaiolo</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
         #app { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
-        
         video { width: 100%; height: 100%; object-fit: cover; }
         
-        /* Cornice larga quanto lo schermo (Full Width) */
+        /* Adattamento alla lunghezza (altezza) come richiesto */
         .frame { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            pointer-events: none; object-fit: cover; z-index: 5;
+            pointer-events: none; object-fit: contain; z-index: 5;
         }
 
         .controls {
@@ -22,13 +21,13 @@
         }
 
         .btn {
-            background: rgba(255,255,255,0.8); border: none; border-radius: 50%;
+            background: rgba(255,255,255,0.9); border: none; border-radius: 50%;
             display: flex; justify-content: center; align-items: center; cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
 
-        .btn-capture { width: 75px; height: 75px; border: 5px solid #fff; background: transparent; }
-        .btn-small { width: 50px; height: 50px; font-size: 20px; }
+        .btn-capture { width: 80px; height: 80px; border: 6px solid #fff; background: transparent; }
+        .btn-small { width: 55px; height: 55px; font-size: 24px; }
 
         canvas { display: none; }
     </style>
@@ -37,16 +36,12 @@
 
 <div id="app">
     <video id="webcam" autoplay playsinline></video>
+    <!-- File rinominato in certified.png come richiesto -->
     <img id="userFrame" src="certified.png" class="frame">
     
     <div class="controls">
-        <!-- Bottone Cambio Camera -->
         <button class="btn btn-small" id="switchBtn">🔄</button>
-        
-        <!-- Bottone Scatto -->
         <button class="btn btn-capture" id="captureBtn"></button>
-        
-        <!-- Bottone Condividi (appare dopo lo scatto) -->
         <button class="btn btn-small" id="shareBtn" style="display:none;">📤</button>
     </div>
     
@@ -62,88 +57,86 @@
     const shareBtn = document.getElementById('shareBtn');
 
     let currentStream;
-    let useFacingMode = "environment"; // Parte con la posteriore
+    let useFacingMode = "environment";
 
     async function startCamera(mode) {
         if (currentStream) {
             currentStream.getTracks().forEach(track => track.stop());
         }
         try {
+            // Richiesta massima risoluzione possibile
             const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: mode }, 
+                video: { 
+                    facingMode: mode,
+                    width: { ideal: 4096 },
+                    height: { ideal: 2160 }
+                }, 
                 audio: false 
             });
             currentStream = stream;
             video.srcObject = stream;
         } catch (err) {
-            console.error("Errore camera:", err);
-            // Fallback se la "environment" non esiste
             if(mode === "environment") startCamera("user");
         }
     }
 
-    // Cambio Camera
-    switchBtn.addEventListener('click', () => {
-        useFacingMode = (useFacingMode === "environment") ? "user" : "environment";
-        startCamera(useFacingMode);
-    });
-
-    // Scatto e Creazione Immagine
     captureBtn.addEventListener('click', () => {
+        // Usa la risoluzione nativa del sensore della fotocamera
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext('2d');
 
-        // 1. Disegna il video (se camera frontale, specchia l'immagine)
         if (useFacingMode === "user") {
             ctx.translate(canvas.width, 0);
             ctx.scale(-1, 1);
         }
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset trasformazione
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-        // 2. Disegna la cornice sovrapposta (object-fit: cover logic)
-        const vRatio = canvas.height / frameImg.naturalHeight;
+        // Logica per adattare alla lunghezza (altezza) dell'immagine finale
         const hRatio = canvas.width / frameImg.naturalWidth;
-        const ratio = Math.max(hRatio, vRatio);
+        const vRatio = canvas.height / frameImg.naturalHeight;
+        const ratio = Math.min(hRatio, vRatio); // Adatta alla lunghezza
         const w = frameImg.naturalWidth * ratio;
         const h = frameImg.naturalHeight * ratio;
         const x = (canvas.width - w) / 2;
         const y = (canvas.height - h) / 2;
+        
         ctx.drawImage(frameImg, x, y, w, h);
 
-        // Mostra il tasto condividi
-        shareBtn.style.display = "flex";
-        
-        // Download automatico (per Android/PC)
+        // Salvataggio in JPEG alta qualità
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        const fileName = 'omasto_sorrento_master_pizzaiolo.jpeg';
+
         const link = document.createElement('a');
-        link.download = 'omasto_sorrento_master_pizzaiolo.jpg';
-        link.href = canvas.toDataURL('image/jpeg');
+        link.download = fileName;
+        link.href = dataUrl;
         link.click();
+
+        shareBtn.style.display = "flex";
     });
 
-    // Funzione Condividi (Menu Smartphone)
     shareBtn.addEventListener('click', async () => {
-        const dataUrl = canvas.toDataURL('image/png');
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
         const blob = await (await fetch(dataUrl)).blob();
-        const file = new File([blob], 'omasto_sorrento_master_pizzaiolo.jpg', { type: 'image/jpeg' });
+        const file = new File([blob], 'omasto_sorrento_master_pizzaiolo.jpeg', { type: 'image/jpeg' });
 
         if (navigator.share) {
             try {
                 await navigator.share({
                     files: [file],
-                    title: 'La mia foto con cornice',
-                    text: 'Guarda la foto che ho appena scattato!'
+                    title: 'O Masto - Master Pizzaiolo',
+                    text: 'Il mio diploma di Master Pizzaiolo!'
                 });
-            } catch (err) {
-                console.log("Condivisione annullata");
-            }
-        } else {
-            alert("Il tuo browser non supporta la condivisione diretta. La foto è stata scaricata nei tuoi download.");
+            } catch (err) { console.log("Share failed"); }
         }
     });
 
-    // Avvio iniziale
+    switchBtn.addEventListener('click', () => {
+        useFacingMode = (useFacingMode === "environment") ? "user" : "environment";
+        startCamera(useFacingMode);
+    });
+
     startCamera(useFacingMode);
 </script>
 
