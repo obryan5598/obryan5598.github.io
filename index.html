@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fotocamera con Cornice</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+        #container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        .frame { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            pointer-events: none; /* Permette di toccare il video sotto */
+            object-fit: contain; /* Adatta la cornice allo schermo */
+        }
+        .btn-capture {
+            position: absolute; bottom: 30px; width: 70px; height: 70px;
+            background: white; border-radius: 50%; border: 5px solid rgba(0,0,0,0.2);
+            cursor: pointer; z-index: 10;
+        }
+    </style>
+</head>
+<body>
+
+<div id="container">
+    <video id="webcam" autoplay playsinline></video>
+    <img src="cornice.png" class="frame">
+    <div class="btn-capture" onclick="alert('Fai uno screenshot per salvare!')"></div>
+</div>
+
+<script>
+    const video = document.getElementById('webcam');
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+        .then(stream => { video.srcObject = stream; })
+        .catch(err => { alert("Errore fotocamera: " + err); });
+</script>
+
+</body>
+</html>
