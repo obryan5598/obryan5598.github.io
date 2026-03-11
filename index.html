@@ -67,11 +67,11 @@
 
         doc.setFont("times", "italic");
         doc.setFontSize(70);
-        doc.text(name, 561, 330, { align: 'center' });
+        doc.text(name, 561, 350, { align: 'center' });
 
         const oggi = new Date().toLocaleDateString('it-IT');
         doc.setFontSize(50);
-        doc.text(`${oggi}`, 650, 680, { align: 'right' });
+        doc.text(`${oggi}`, 650, 680);
 
         if (type === 'download') {
             doc.save('diploma_omast.pdf');
