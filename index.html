@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>O Mast - Master Pizzaiolo</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; display: flex; flex-direction: column; }
         
         #camera-container { 
             position: relative; 
@@ -24,9 +24,9 @@
             pointer-events: none; object-fit: contain; z-index: 5;
         }
 
-        /* Pannello comandi in basso */
+        /* Pannello ridotto del 30% (da 140px a ~98px) */
         .controls {
-            height: 140px; 
+            height: 98px; 
             width: 100%; 
             background: #111;
             display: flex; 
@@ -38,7 +38,7 @@
         }
 
         .btn {
-            border: none; border-radius: 12px;
+            border: none; border-radius: 10px;
             display: flex; flex-direction: column; justify-content: center; align-items: center; 
             cursor: pointer; transition: transform 0.1s;
             color: #000; font-weight: bold; text-transform: uppercase;
@@ -46,15 +46,14 @@
 
         .btn:active { transform: scale(0.95); }
 
-        /* Bottone Inversione */
-        .btn-switch { width: 60px; height: 60px; background: #333; color: white; font-size: 24px; border-radius: 50%; }
-
-        /* Bottoni Azione */
-        .btn-action { width: 90px; height: 80px; font-size: 14px; letter-spacing: 1px; }
+        /* Bottoni ridotti del 30% */
+        .btn-switch { width: 42px; height: 42px; background: #333; color: white; font-size: 18px; border-radius: 50%; }
+        .btn-action { width: 65px; height: 58px; font-size: 11px; letter-spacing: 0.5px; }
+        
         .btn-shot { background: #fff; }
-        .btn-share { background: #ffd700; } /* Oro per la condivisione */
+        .btn-share { background: #ffd700; }
 
-        .btn span { margin-top: 5px; font-size: 10px; }
+        .btn span { margin-top: 3px; font-size: 8px; }
 
         canvas { display: none; }
     </style>
@@ -67,15 +66,10 @@
 </div>
 
 <div class="controls">
-    <!-- 1. Inversione Fotocamera -->
     <button class="btn btn-switch" id="switchBtn">🔄</button>
-    
-    <!-- 2. Scatto con Download -->
     <button class="btn btn-action btn-shot" id="captureBtn">
         📸 <span>SHOT</span>
     </button>
-    
-    <!-- 3. Scatto con Condivisione -->
     <button class="btn btn-action btn-share" id="shareBtn">
         📤 <span>SHARE</span>
     </button>
@@ -134,7 +128,6 @@
         return canvas.toDataURL('image/jpeg', 0.98);
     }
 
-    // Azione SHOT
     captureBtn.addEventListener('click', () => {
         const dataUrl = createSnapshot();
         const link = document.createElement('a');
@@ -143,7 +136,6 @@
         link.click();
     });
 
-    // Azione SHARE
     shareBtn.addEventListener('click', async () => {
         const dataUrl = createSnapshot();
         const blob = await (await fetch(dataUrl)).blob();
@@ -157,8 +149,6 @@
                     text: 'Il mio diploma certificato!'
                 });
             } catch (err) { console.log("Share cancelled"); }
-        } else {
-            alert("Sharing not supported on this browser. Use SHOT to save.");
         }
     });
 
