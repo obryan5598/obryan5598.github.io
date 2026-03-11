@@ -5,48 +5,65 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>O Mast - Master Pizzaiolo</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
-        #app { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+        /* Layout scuro a tutto schermo */
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; display: flex; flex-direction: column; }
+        
+        /* Area della fotocamera e cornice */
+        #camera-container { 
+            position: relative; 
+            flex-grow: 1; /* Occupa tutto lo spazio sopra i bottoni */
+            width: 100vw; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            overflow: hidden;
+        }
+
         video { width: 100%; height: 100%; object-fit: cover; }
         
-        /* Adattamento alla lunghezza (altezza) come richiesto */
         .frame { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             pointer-events: none; object-fit: contain; z-index: 5;
         }
 
+        /* Barra dei comandi SOTTO la cornice */
         .controls {
-            position: absolute; bottom: 30px; width: 100%; 
-            display: flex; justify-content: space-around; align-items: center; z-index: 10;
+            height: 120px; /* Spazio fisso per i bottoni in basso */
+            width: 100%; 
+            background: #000;
+            display: flex; 
+            justify-content: space-around; 
+            align-items: center; 
+            z-index: 10;
+            padding-bottom: env(safe-area-inset-bottom); /* Supporto per iPhone moderni */
         }
 
         .btn {
-            background: rgba(255,255,255,0.9); border: none; border-radius: 50%;
+            background: #fff; border: none; border-radius: 50%;
             display: flex; justify-content: center; align-items: center; cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            box-shadow: 0 2px 10px rgba(255,255,255,0.2);
         }
 
-        .btn-capture { width: 80px; height: 80px; border: 6px solid #fff; background: transparent; }
-        .btn-small { width: 55px; height: 55px; font-size: 24px; }
+        .btn-capture { width: 70px; height: 70px; border: 5px solid #555; }
+        .btn-small { width: 50px; height: 50px; font-size: 22px; background: #333; color: white; }
 
         canvas { display: none; }
     </style>
 </head>
 <body>
 
-<div id="app">
+<div id="camera-container">
     <video id="webcam" autoplay playsinline></video>
-    <!-- File rinominato in certified.png come richiesto -->
     <img id="userFrame" src="certified.png" class="frame">
-    
-    <div class="controls">
-        <button class="btn btn-small" id="switchBtn">🔄</button>
-        <button class="btn btn-capture" id="captureBtn"></button>
-        <button class="btn btn-small" id="shareBtn" style="display:none;">📤</button>
-    </div>
-    
-    <canvas id="snapshotCanvas"></canvas>
 </div>
+
+<div class="controls">
+    <button class="btn btn-small" id="switchBtn" title="Cambia Camera">🔄</button>
+    <button class="btn btn-capture" id="captureBtn" title="Scatta"></button>
+    <button class="btn btn-small" id="shareBtn" style="display:none;" title="Condividi">📤</button>
+</div>
+
+<canvas id="snapshotCanvas"></canvas>
 
 <script>
     const video = document.getElementById('webcam');
@@ -64,11 +81,10 @@
             currentStream.getTracks().forEach(track => track.stop());
         }
         try {
-            // Richiesta massima risoluzione possibile
             const stream = await navigator.mediaDevices.getUserMedia({ 
                 video: { 
                     facingMode: mode,
-                    width: { ideal: 4096 },
+                    width: { ideal: 3840 },
                     height: { ideal: 2160 }
                 }, 
                 audio: false 
@@ -81,7 +97,6 @@
     }
 
     captureBtn.addEventListener('click', () => {
-        // Usa la risoluzione nativa del sensore della fotocamera
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext('2d');
@@ -93,10 +108,9 @@
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-        // Logica per adattare alla lunghezza (altezza) dell'immagine finale
         const hRatio = canvas.width / frameImg.naturalWidth;
         const vRatio = canvas.height / frameImg.naturalHeight;
-        const ratio = Math.min(hRatio, vRatio); // Adatta alla lunghezza
+        const ratio = Math.min(hRatio, vRatio);
         const w = frameImg.naturalWidth * ratio;
         const h = frameImg.naturalHeight * ratio;
         const x = (canvas.width - w) / 2;
@@ -104,12 +118,9 @@
         
         ctx.drawImage(frameImg, x, y, w, h);
 
-        // Salvataggio in JPEG alta qualità
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
-        const fileName = 'omasto_sorrento_master_pizzaiolo.jpeg';
-
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.98);
         const link = document.createElement('a');
-        link.download = fileName;
+        link.download = 'omast_sorrento_master_pizzaiolo.jpeg';
         link.href = dataUrl;
         link.click();
 
@@ -117,16 +128,16 @@
     });
 
     shareBtn.addEventListener('click', async () => {
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.98);
         const blob = await (await fetch(dataUrl)).blob();
-        const file = new File([blob], 'omasto_sorrento_master_pizzaiolo.jpeg', { type: 'image/jpeg' });
+        const file = new File([blob], 'omast_sorrento_master_pizzaiolo.jpeg', { type: 'image/jpeg' });
 
         if (navigator.share) {
             try {
                 await navigator.share({
                     files: [file],
-                    title: 'O Masto - Master Pizzaiolo',
-                    text: 'Il mio diploma di Master Pizzaiolo!'
+                    title: 'O Mast - Master Pizzaiolo',
+                    text: 'Il mio diploma certificato!'
                 });
             } catch (err) { console.log("Share failed"); }
         }
