@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>O Mast - Diploma Generator</title>
-    <!-- Libreria aggiornata -->
     <script src="https://cdnjs.cloudflare.com"></script>
     <style>
         body { font-family: sans-serif; background: #000; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
         .card { background: #1a1a1a; padding: 30px; border-radius: 20px; text-align: center; width: 85%; max-width: 350px; border-top: 5px solid; border-image: linear-gradient(to right, #009246 33.3%, #fff 33.3%, #fff 66.6%, #ce2b37 66.6%) 1; }
-        input { width: 100%; padding: 12px; margin: 15px 0; border-radius: 8px; border: 1px solid #333; background: #222; color: white; font-size: 16px; box-sizing: border-box; }
+        input { width: 100%; padding: 12px; margin: 15px 0; border-radius: 8px; border: 1px solid #333; background: #222; color: white; font-size: 16px; box-sizing: border-box; text-align: center; }
         .btn-group { display: flex; flex-direction: column; gap: 10px; width: 100%; }
-        button { border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 13px; }
+        button { border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 13px; transition: 0.3s; }
+        button:disabled { background: #444 !important; color: #888; cursor: not-allowed; }
         #downloadBtn { background: #fff; color: #000; }
         #shareBtn { background: #ffd700; color: #000; }
     </style>
@@ -20,61 +20,68 @@
 
 <div class="card">
     <h2 style="color:#ffd700; margin:0;">MASTER PIZZAIOLO</h2>
-    <p style="font-size:12px; color:#aaa;">Genera il tuo certificato ufficiale</p>
+    <p id="status" style="font-size:11px; color:#ffd700;">Caricamento template...</p>
     <input type="text" id="userName" placeholder="Nome e Cognome">
     <div class="btn-group">
-        <button id="downloadBtn">Download PDF</button>
-        <button id="shareBtn">Share PDF</button>
+        <button id="downloadBtn" disabled>Download PDF</button>
+        <button id="shareBtn" disabled>Share PDF</button>
     </div>
 </div>
 
 <script>
-    // Inizializzazione corretta per window globale
-    window.jsPDF = window.jspdf.jsPDF;
+    // Inizializzazione forzata della libreria
+    const { jsPDF } = window.jspdf;
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = 'template.jpg'; // Deve essere esattamente questo nome nel repo
+
+    // Abilita i pulsanti solo quando l'immagine è caricata
+    img.onload = () => {
+        document.getElementById('downloadBtn').disabled = false;
+        document.getElementById('shareBtn').disabled = false;
+        document.getElementById('status').innerText = "Template Pronto ✅";
+        document.getElementById('status').style.color = "#009246";
+    };
+
+    img.onerror = () => {
+        document.getElementById('status').innerText = "ERRORE: template.jpg non trovato!";
+        document.getElementById('status').style.color = "#ce2b37";
+    };
 
     async function processPDF(action) {
         const name = document.getElementById('userName').value.trim();
-        if (!name) { alert("Inserisci un nome!"); return; }
+        if (!name) { alert("Inserisci Nome e Cognome!"); return; }
 
         const doc = new jsPDF({ orientation: 'landscape', unit: 'px', format: [1123, 794] });
-        const img = new Image();
         
-        // Risolve problemi di caricamento cross-origin su alcuni browser
-        img.crossOrigin = "anonymous"; 
-        img.src = 'template.jpg'; 
+        // Aggiunta immagine
+        doc.addImage(img, 'JPEG', 0, 0, 1123, 794);
 
-        img.onload = async function() {
-            // Aggiunta immagine template
-            doc.addImage(img, 'JPEG', 0, 0, 1123, 794);
+        // Nome
+        doc.setFont("times", "italic");
+        doc.setFontSize(70);
+        doc.setTextColor(40, 40, 40);
+        doc.text(name, 561, 420, { align: 'center' });
 
-            // Nome elegante
-            doc.setFont("times", "italic");
-            doc.setFontSize(70);
-            doc.setTextColor(40, 40, 40);
-            doc.text(name, 561, 420, { align: 'center' });
+        // Data
+        const oggi = new Date().toLocaleDateString('it-IT');
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(22);
+        doc.text(`Data: ${oggi}`, 150, 700);
 
-            // Data automatica
-            const oggi = new Date().toLocaleDateString('it-IT');
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(22);
-            doc.text(`Data: ${oggi}`, 150, 700);
-
-            if (action === 'download') {
-                doc.save(`diploma_${name.replace(/\s+/g, '_')}.pdf`);
+        if (action === 'download') {
+            doc.save(`diploma_omast_${name.replace(/\s+/g, '_')}.jpeg`);
+        } else {
+            const blob = doc.output('blob');
+            const file = new File([blob], 'diploma_omast.pdf', { type: 'application/pdf' });
+            if (navigator.share) {
+                try {
+                    await navigator.share({ files: [file], title: 'Diploma O Mast' });
+                } catch (e) { console.log("Share cancelled"); }
             } else {
-                const blob = doc.output('blob');
-                const file = new File([blob], 'diploma_omast.pdf', { type: 'application/pdf' });
-                if (navigator.share) {
-                    await navigator.share({ files: [file], title: 'O Mast Diploma' });
-                } else {
-                    alert("Condivisione non supportata. Scarica il file.");
-                }
+                alert("Browser non supportato per la condivisione. Usa Download.");
             }
-        };
-
-        img.onerror = () => {
-            alert("ERRORE: Immagine 'template.jpg' non trovata nel repository GitHub.");
-        };
+        }
     }
 
     document.getElementById('downloadBtn').onclick = () => processPDF('download');
