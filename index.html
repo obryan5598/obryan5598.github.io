@@ -1,37 +1,91 @@
 <!DOCTYPE html>
-<html>
+<html lang="it">
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fotocamera con Cornice</title>
+    <title>Fotocamera NFC</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
-        #container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: sans-serif; }
+        #app { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; }
+        
         video { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* La cornice si adatta allo schermo */
         .frame { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            pointer-events: none; /* Permette di toccare il video sotto */
-            object-fit: contain; /* Adatta la cornice allo schermo */
+            pointer-events: none; object-fit: contain; z-index: 5;
         }
+
+        .controls {
+            position: absolute; bottom: 40px; width: 100%; display: flex; justify-content: center; z-index: 10;
+        }
+
         .btn-capture {
-            position: absolute; bottom: 30px; width: 70px; height: 70px;
-            background: white; border-radius: 50%; border: 5px solid rgba(0,0,0,0.2);
-            cursor: pointer; z-index: 10;
+            width: 80px; height: 80px; background: white; border-radius: 50%;
+            border: 8px solid rgba(255,255,255,0.3); cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
+
+        canvas { display: none; } /* Canvas nascosto usato per il montaggio */
     </style>
 </head>
 <body>
 
-<div id="container">
+<div id="app">
     <video id="webcam" autoplay playsinline></video>
-    <img src="certified.png" class="frame">
-    <div class="btn-capture" onclick="alert('Fai uno screenshot per salvare!')"></div>
+    <!-- ASSICURATI CHE IL NOME DEL FILE SIA CORRETTO -->
+    <img id="userFrame" src="certified.png" class="frame">
+    
+    <div class="controls">
+        <div class="btn-capture" id="captureBtn"></div>
+    </div>
+    
+    <canvas id="snapshotCanvas"></canvas>
 </div>
 
 <script>
     const video = document.getElementById('webcam');
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
-        .then(stream => { video.srcObject = stream; })
-        .catch(err => { alert("Errore fotocamera: " + err); });
+    const canvas = document.getElementById('snapshotCanvas');
+    const frameImg = document.getElementById('userFrame');
+    const captureBtn = document.getElementById('captureBtn');
+
+    // Forza fotocamera POSTERIORE (environment)
+    navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: { exact: "environment" } }, 
+        audio: false 
+    }).catch(() => {
+        // Se non trova la posteriore (es. su PC), usa quella disponibile
+        return navigator.mediaDevices.getUserMedia({ video: true });
+    }).then(stream => { 
+        video.srcObject = stream; 
+    });
+
+    captureBtn.addEventListener('click', () => {
+        // Imposta le dimensioni del canvas uguali al video
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d');
+
+        // 1. Disegna il video (la foto)
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // 2. Disegna la cornice sopra (mantenendo le proporzioni)
+        // Calcoliamo come adattare la cornice all'immagine scattata
+        const hRatio = canvas.width / frameImg.naturalWidth;
+        const vRatio = canvas.height / frameImg.naturalHeight;
+        const ratio  = Math.min(hRatio, vRatio);
+        const centerShiftX = (canvas.width - frameImg.naturalWidth * ratio) / 2;
+        const centerShiftY = (canvas.height - frameImg.naturalHeight * ratio) / 2;
+
+        ctx.drawImage(frameImg, 0, 0, frameImg.naturalWidth, frameImg.naturalHeight,
+                      centerShiftX, centerShiftY, frameImg.naturalWidth * ratio, frameImg.naturalHeight * ratio);
+
+        // 3. Download automatico
+        const link = document.createElement('a');
+        link.download = 'foto-nfc-' + Date.now() + '.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    });
 </script>
 
 </body>
